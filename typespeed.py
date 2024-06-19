@@ -1,80 +1,75 @@
-# importing all libraries
-from tkinter import *
-from timeit import default_timer as timer
+import curses
+from curses import wrapper
+import time
 import random
 
-# creating window using gui
-window = Tk()
+def start_screen(stdscr):
+    stdscr.clear()
+    stdscr.addstr("Welcome to the Typing speed Test!")
+    stdscr.addstr("\nPress any key to begin")
+    stdscr.refresh()
+    stdscr.getkey()
+    
+def display_text(stdscr,tar,current,wpm=0):
+    stdscr.addstr(tar)
+    stdscr.addstr(1,0,f"WPM: {wpm}")
+    
+    for i,char in enumerate(current):
+        correct_char=tar[i]
+        curr_char=current[i]
+        color=curses.color_pair(1)
+        if correct_char!=curr_char:
+            color=curses.color_pair(2)
+        stdscr.addstr(0,i,char, color)
+                    
+def load_text():
+    with open("text.txt","r") as f:
+        lines=f.readlines()
+        return random.choice(lines).strip()    
 
-# the size of the window is defined
-window.geometry("450x200")
+def wpm_test(stdscr):
+    target_text=load_text()
+    current_text=[]
+    start_time=time.time()
+    stdscr.nodelay(True)
+    
+    while True:
+        time_elapsed=max(time.time()-start_time,1)
+        wpm=round((len(current_text)/(time_elapsed/60))/5)
+        
+        stdscr.clear()
+        display_text(stdscr,target_text,current_text,wpm)
+        stdscr.refresh()
+        
+        if "".join(current_text)==target_text:
+            stdscr.nodelay(False)
+            break
+        
+        try:
+            key=stdscr.getkey()
+        except:
+            continue    
+        
+        if ord(key)==27:
+            break
+        if key in ("KEY_BACKSPACE","\b","\x7f"):
+            if len(current_text)>0:
+                current_text.pop()
+        elif len(current_text)<len(target_text):
+            current_text.append(key)        
+              
 
-x = 0
-
-# defining the function for the test
-def game():
-	global x
-
-	# loop for destroying the window
-	# after on test
-	if x == 0:
-		window.destroy()
-		x = x+1
-
-	# defining function for results of test
-	def check_result():
-		if entry.get() == words[word]:
-
-			# here start time is when the window
-			# is opened and end time is when
-			# window is destroyed
-			end = timer()
-
-			# we deduct the start time from end
-			# time and calculate results using
-			# timeit function
-			print(end-start)
-		else:
-			print("Wrong Input")
-
-	words = ['programming', 'coding', 'algorithm',
-			'systems', 'python', 'software']
-
-	# Give random words for testing the speed of user
-	word = random.randint(0, (len(words)-1))
-
-	# start timer using timeit function
-	start = timer()
-	windows = Tk()
-	windows.geometry("450x200")
-
-	# use label method of tkinter for labeling in window
-	x2 = Label(windows, text=words[word], font="times 20")
-
-	# place of labeling in window
-	x2.place(x=150, y=10)
-	x3 = Label(windows, text="Start Typing", font="times 20")
-	x3.place(x=10, y=50)
-
-	entry = Entry(windows)
-	entry.place(x=280, y=55)
-
-	# buttons to submit output and check results
-	b2 = Button(windows, text="Done",
-				command=check_result, width=12, bg='grey')
-	b2.place(x=150, y=100)
-
-	b3 = Button(windows, text="Try Again", 
-				command=game, width=12, bg='grey')
-	b3.place(x=250, y=100)
-	windows.mainloop()
-
-
-x1 = Label(window, text="Lets start playing..", font="times 20")
-x1.place(x=10, y=50)
-
-b1 = Button(window, text="Go", command=game, width=12, bg='grey')
-b1.place(x=150, y=100)
-
-# calling window
-window.mainloop()
+def main(stdscr):
+    curses.init_pair(1,curses.COLOR_GREEN, curses.COLOR_BLACK)
+    curses.init_pair(2,curses.COLOR_RED, curses.COLOR_BLACK)
+    
+    start_screen(stdscr)
+    while True:
+        wpm_test(stdscr)
+    
+        stdscr.addstr(2,0,"You completed the text! Press any key to continue.....")
+        key=stdscr.getkey()
+        if ord(key)==27:
+            break
+    
+wrapper(main)    
